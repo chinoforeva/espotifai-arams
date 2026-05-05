@@ -36,12 +36,37 @@ async function loadData() {
 
     try {
         for (const player of PLAYERS) {
+            console.log(`Buscando PUUID para ${player.gameName}#${player.tagLine}...`);
             const puuidData = await fetch(`${API_BASE}/api/puuid?gameName=${encodeURIComponent(player.gameName)}&tagLine=${encodeURIComponent(player.tagLine)}`).then(r => r.json());
-            if (!puuidData.puuid) continue;
+            console.log('PUUID response:', puuidData);
+            if (!puuidData.puuid) {
+                console.error(`No se encontró PUUID para ${player.gameName}#${player.tagLine}`);
+                continue;
+            }
+            console.log(`Obteniendo partidas para ${player.gameName}...`);
             const matchIds = await fetch(`${API_BASE}/api/matches?puuid=${puuidData.puuid}`).then(r => r.json());
+            console.log(`Se encontraron ${matchIds.length} partidas totales`);
             const aramMatches = await filterAramMatches(puuidData.puuid, matchIds);
+            console.log(`${player.gameName} tiene ${aramMatches.length} partidas ARAM`);
             playerData.push({ ...player, puuid: puuidData.puuid, matches: aramMatches });
         }
+
+        if (playerData.length === 0) {
+            throw new Error('No se encontraron datos para ningún jugador. Verifica los nombres y la API key.');
+        }
+
+        allMatches = playerData.flatMap(p => p.matches);
+        renderAllTabs();
+        loading.style.display = 'none';
+        tabs.style.display = 'flex';
+        content.style.display = 'block';
+    } catch (err) {
+        console.error('Error:', err);
+        loading.style.display = 'none';
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = 'Error: ' + err.message + '. Revisa la consola (F12) para más detalles.';
+    }
+}
 
         allMatches = playerData.flatMap(p => p.matches);
         renderAllTabs();
