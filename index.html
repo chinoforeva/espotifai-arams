@@ -2,21 +2,21 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Espotifai Arams</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-    <header>
-        <h1>ESPO<mark>TIFAI</mark> ARAMS</h1>
-        <p class="subtitle">Estadísticas ARAM (Modo Normal) - Últimos 30 días</p>
-        <p class="note">* ARAM: Mayhem (Del Chaos) no está disponible en la API pública de Riot</p>
-    </header>
+        <header>
+            <h1>ESPO<mark>TIFAI</mark> ARAMS</h1>
+            <p class="subtitle">Estadísticas ARAM: Mayhem - Últimos 30 días</p>
+        </header>
 
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>Cargando datos de invocadores...</p>
+            <p>Conectando al cliente de League of Legends...</p>
         </div>
 
         <div class="error" id="error" style="display:none;"></div>
@@ -48,6 +48,6 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="renderer.js"></script>
 </body>
 </html>

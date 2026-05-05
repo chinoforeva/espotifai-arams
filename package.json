@@ -1,13 +1,18 @@
 {
   "name": "espotifai-arams",
   "version": "1.0.0",
-  "description": "Estadísticas ARAM de League of Legends",
-  "main": "server.js",
+  "description": "Estadísticas ARAM: Mayhem - Espotifai Arams",
+  "main": "src/main/index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "electron .",
+    "build": "electron-builder"
   },
   "dependencies": {
-    "express": "^5.2.1",
-    "node-fetch": "^2.7.0"
+    "electron": "^25.0.0",
+    "league-connect": "^1.2.0",
+    "better-sqlite3": "^9.0.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.0.0"
   }
 }
