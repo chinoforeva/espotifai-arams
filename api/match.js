@@ -2,7 +2,7 @@ const fetch = require('node-fetch');
 
 module.exports = async (req, res) => {
     const { matchId } = req.query;
-    const RIOT_API_KEY = process.env.RIOT_API_KEY || 'RGAPI-dcfd2b50-91d3-4a8e-a688-5b73dacfc498';
+    const RIOT_API_KEY = process.env.RIOT_API_KEY || 'RGAPI-07b26c13-eff7-4aaf-8d0a-c30e8c43770b';
     
     try {
         const url = `https://americas.api.riotgames.com/lol/match/v5/matches/${matchId}`;
