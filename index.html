@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espotifai Arams</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ESPO<mark>TIFAI</mark> ARAMS</h1>
+            <p class="subtitle">Estadísticas ARAM - Últimos 30 días</p>
+        </header>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Cargando datos de invocadores...</p>
+        </div>
+
+        <div class="error" id="error" style="display:none;"></div>
+
+        <div class="tabs" id="tabs" style="display:none;">
+            <button class="tab active" data-tab="max-damage">Max Damage</button>
+            <button class="tab" data-tab="max-healing">Max Shield/Healing</button>
+            <button class="tab" data-tab="max-kills">Más Kills</button>
+            <button class="tab" data-tab="top-stats">Top Stats</button>
+        </div>
+
+        <div class="content" id="content" style="display:none;">
+            <div class="tab-content active" id="max-damage">
+                <h2>Top 5 - Máximo Daño</h2>
+                <div class="table-container" id="damage-table"></div>
+            </div>
+            <div class="tab-content" id="max-healing">
+                <h2>Top 5 - Máximo Shield/Healing</h2>
+                <div class="table-container" id="healing-table"></div>
+            </div>
+            <div class="tab-content" id="max-kills">
+                <h2>Top 5 - Más Kills</h2>
+                <div class="table-container" id="kills-table"></div>
+            </div>
+            <div class="tab-content" id="top-stats">
+                <h2>Estadísticas por Jugador</h2>
+                <div class="player-cards" id="player-cards"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
