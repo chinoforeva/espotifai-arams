@@ -26,6 +26,8 @@ function setupTabs() {
     });
 }
 
+const API_BASE = window.location.origin;
+
 async function loadData() {
     const loading = document.getElementById('loading');
     const errorDiv = document.getElementById('error');
@@ -34,9 +36,9 @@ async function loadData() {
 
     try {
         for (const player of PLAYERS) {
-            const puuidData = await fetch(`/api/puuid?gameName=${encodeURIComponent(player.gameName)}&tagLine=${encodeURIComponent(player.tagLine)}`).then(r => r.json());
+            const puuidData = await fetch(`${API_BASE}/api/puuid?gameName=${encodeURIComponent(player.gameName)}&tagLine=${encodeURIComponent(player.tagLine)}`).then(r => r.json());
             if (!puuidData.puuid) continue;
-            const matchIds = await fetch(`/api/matches?puuid=${puuidData.puuid}`).then(r => r.json());
+            const matchIds = await fetch(`${API_BASE}/api/matches?puuid=${puuidData.puuid}`).then(r => r.json());
             const aramMatches = await filterAramMatches(puuidData.puuid, matchIds);
             playerData.push({ ...player, puuid: puuidData.puuid, matches: aramMatches });
         }
@@ -56,7 +58,7 @@ async function loadData() {
 async function filterAramMatches(puuid, matchIds) {
     const aramMatches = [];
     for (const id of matchIds) {
-        const match = await fetch(`/api/match?matchId=${id}`).then(r => r.json());
+        const match = await fetch(`${API_BASE}/api/match?matchId=${id}`).then(r => r.json());
         if (match.info && match.info.queueId === 450) {
             const participant = match.info.participants.find(p => p.puuid === puuid);
             if (participant) aramMatches.push({ ...participant, matchId: id, gameEndTimestamp: match.info.gameEndTimestamp });
