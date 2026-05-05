@@ -40,6 +40,13 @@ header h1 mark {
     font-size: 1.1rem;
 }
 
+.note {
+    color: #ff6666;
+    margin-top: 5px;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
 .loading {
     text-align: center;
     padding: 60px 20px;
