@@ -4,15 +4,12 @@
   "description": "Estadísticas ARAM: Mayhem - Espotifai Arams",
   "main": "src/main/index.js",
   "scripts": {
-    "start": "electron .",
-    "build": "electron-builder"
+    "start": "electron ."
   },
   "dependencies": {
-    "electron": "^25.0.0",
-    "league-connect": "^1.2.0",
-    "better-sqlite3": "^9.0.0"
+    "league-connect": "^6.0.0-rc13"
   },
   "devDependencies": {
-    "electron-builder": "^24.0.0"
+    "electron": "^25.0.0"
   }
 }

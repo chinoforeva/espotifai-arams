@@ -1,19 +1,19 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const { authenticate, createHttp1Request } = require('league-connect');
 const path = require('path');
-const Database = require('better-sqlite3');
+const fs = require('fs');
 
 let mainWindow;
 let credentials = null;
 let pollTimer = null;
-let db;
+let db = { games: [], summoners: [] };
 
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
         webPreferences: {
-            preload: path.join(__dirname, '../preload.js'),
+            preload: path.join(__dirname, '../../preload.js'),
             nodeIntegration: false,
             contextIsolation: true
         }
@@ -22,33 +22,18 @@ function createWindow() {
     mainWindow.loadFile('index.html');
 }
 
-function initDB() {
-    db = new Database('aram-mayhem.db');
-    db.exec(`
-        CREATE TABLE IF NOT EXISTS games (
-            gameId INTEGER PRIMARY KEY,
-            puuid TEXT,
-            queueId INTEGER,
-            gameCreation INTEGER,
-            gameDuration INTEGER,
-            championId INTEGER,
-            championName TEXT,
-            kills INTEGER,
-            deaths INTEGER,
-            assists INTEGER,
-            totalDamageDealtToChampions INTEGER,
-            totalHealsOnTeammates INTEGER,
-            totalDamageShieldedOnTeammates INTEGER,
-            win BOOLEAN,
-            augments TEXT,
-            gameData TEXT
-        );
-        CREATE TABLE IF NOT EXISTS summoners (
-            puuid TEXT PRIMARY KEY,
-            gameName TEXT,
-            tagLine TEXT
-        );
-    `);
+function loadDB() {
+    try {
+        if (fs.existsSync('aram-mayhem.json')) {
+            db = JSON.parse(fs.readFileSync('aram-mayhem.json', 'utf8'));
+        }
+    } catch (e) {
+        db = { games: [], summoners: [] };
+    }
+}
+
+function saveDB() {
+    fs.writeFileSync('aram-mayhem.json', JSON.stringify(db, null, 2));
 }
 
 async function lcuRequest(url, method = 'GET') {
@@ -72,18 +57,57 @@ async function fetchGameDetails(gameId) {
     return await lcuRequest(`/lol-match-history/v1/games/${gameId}`);
 }
 
+function gameExists(gameId) {
+    return db.games.some(g => g.gameId === gameId);
+}
+
+function insertGame(fullGame, puuid) {
+    const participant = fullGame.participants?.find(p => p.puuid === puuid) || fullGame;
+    const game = {
+        gameId: fullGame.gameId,
+        puuid: puuid,
+        queueId: fullGame.queueId,
+        gameCreation: fullGame.gameCreation || Date.now(),
+        gameDuration: fullGame.gameDuration || 0,
+        championId: participant.championId || 0,
+        championName: participant.championName || 'Unknown',
+        kills: participant.kills || 0,
+        deaths: participant.deaths || 0,
+        assists: participant.assists || 0,
+        totalDamageDealtToChampions: participant.totalDamageDealtToChampions || 0,
+        totalHealsOnTeammates: participant.totalHealsOnTeammates || 0,
+        totalDamageShieldedOnTeammates: participant.totalDamageShieldedOnTeammates || 0,
+        win: participant.win || false,
+        augments: participant.augments || []
+    };
+    
+    if (!gameExists(game.gameId)) {
+        db.games.push(game);
+        saveDB();
+        return true;
+    }
+    return false;
+}
+
 async function fetchNewGames() {
     try {
         const summoner = await lcuRequest('/lol-summoner/v1/current-summoner');
-        db.prepare('INSERT OR REPLACE INTO summoners (puuid, gameName, tagLine) VALUES (?, ?, ?)')
-            .run(summoner.puuid, summoner.gameName, summoner.tagLine);
+        
+        if (!db.summoners.some(s => s.puuid === summoner.puuid)) {
+            db.summoners.push({
+                puuid: summoner.puuid,
+                gameName: summoner.gameName,
+                tagLine: summoner.tagLine
+            });
+            saveDB();
+        }
         
         const history = await fetchMatchHistory(summoner.puuid, 0, 99);
         const games = history.games?.games || history.games || [];
         let newGames = 0;
         
         for (const game of games) {
-            if (db.prepare('SELECT 1 FROM games WHERE gameId = ?').get(game.gameId)) continue;
+            if (gameExists(game.gameId)) continue;
             if (game.queueId !== 2400) continue;
             
             let fullGame;
@@ -93,34 +117,13 @@ async function fetchNewGames() {
                 fullGame = game;
             }
             
-            const participant = fullGame.participants?.find(p => p.puuid === summoner.puuid) || fullGame;
-            db.prepare(`INSERT OR REPLACE INTO games 
-                (gameId, puuid, queueId, gameCreation, gameDuration, championId, championName, 
-                 kills, deaths, assists, totalDamageDealtToChampions, totalHealsOnTeammates, 
-                 totalDamageShieldedOnTeammates, win, augments, gameData)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-                .run(
-                    fullGame.gameId || game.gameId,
-                    summoner.puuid,
-                    fullGame.queueId || game.queueId,
-                    fullGame.gameCreation || Date.now(),
-                    fullGame.gameDuration || 0,
-                    participant.championId || 0,
-                    participant.championName || 'Unknown',
-                    participant.kills || 0,
-                    participant.deaths || 0,
-                    participant.assists || 0,
-                    participant.totalDamageDealtToChampions || 0,
-                    participant.totalHealsOnTeammates || 0,
-                    participant.totalDamageShieldedOnTeammates || 0,
-                    participant.win ? 1 : 0,
-                    JSON.stringify(participant.augments || []),
-                    JSON.stringify(fullGame)
-                );
-            newGames++;
+            if (insertGame(fullGame, summoner.puuid)) {
+                newGames++;
+                console.log(`Stored ARAM Mayhem game ${fullGame.gameId || game.gameId}`);
+            }
         }
         
-        return { newGames, totalGames: getDashboardData().totalGames };
+        return { newGames, totalGames: db.games.length };
     } catch (err) {
         console.error('Error fetching games:', err);
         return { newGames: 0, totalGames: 0 };
@@ -128,14 +131,13 @@ async function fetchNewGames() {
 }
 
 function getDashboardData() {
-    const games = db.prepare('SELECT * FROM games ORDER BY gameCreation DESC LIMIT 30').all();
-    const totalGames = db.prepare('SELECT COUNT(*) as count FROM games').get().count;
+    const games = db.games.sort((a, b) => b.gameCreation - a.gameCreation).slice(0, 30);
     
-    const topDamage = db.prepare(`SELECT *, 'damage' as type FROM games ORDER BY totalDamageDealtToChampions DESC LIMIT 5`).all();
-    const topHealing = db.prepare(`SELECT *, 'healing' as type FROM games ORDER BY (totalHealsOnTeammates + totalDamageShieldedOnTeammates) DESC LIMIT 5`).all();
-    const topKills = db.prepare(`SELECT *, 'kills' as type FROM games ORDER BY kills DESC LIMIT 5`).all();
+    const topDamage = [...games].sort((a, b) => b.totalDamageDealtToChampions - a.totalDamageDealtToChampions).slice(0, 5);
+    const topHealing = [...games].sort((a, b) => (b.totalHealsOnTeammates + b.totalDamageShieldedOnTeammates) - (a.totalHealsOnTeammates + a.totalDamageShieldedOnTeammates)).slice(0, 5);
+    const topKills = [...games].sort((a, b) => b.kills - a.kills).slice(0, 5);
     
-    return { games, totalGames, topDamage, topHealing, topKills };
+    return { games, totalGames: db.games.length, topDamage, topHealing, topKills };
 }
 
 ipcMain.handle('fetch-games', async () => {
@@ -147,7 +149,7 @@ ipcMain.handle('get-data', () => {
 });
 
 app.whenReady().then(() => {
-    initDB();
+    loadDB();
     createWindow();
     
     setInterval(async () => {
